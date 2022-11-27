@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:cm="clr-namespace:Plugin.ContextMenu;assembly=Plugin.ContextMenu"
+             x:Class="Plugin.ContextMenu.Sample.Pages.CollectionViewPage"
+             x:Name="this"
+             Title="CollectionView">
+    <Grid RowDefinitions="Auto, *" BindingContext="{x:Reference this}" RowSpacing="16" Padding="0, 32">
+        <VerticalStackLayout Spacing="8">
+            <Label Margin="32, 0" Text="Use the CollectionView provided by Plugin.ContextMenu. iOS needs this to have its underlying view handle the context menu event" />
+            <Label Margin="32, 0" Text="Add a ContextMenu.Menu to the CollectionView and each item will get its context menu" />
+            <Label Margin="32, 0" Text="The BindingContext of the Menu will be the same as the one in ItemTemplate, so you can have dynamic menus based on the Item's data" />
+            <Label Margin="32, 0" Text="Here, the text of the cell is used as the menu's title" />
+        </VerticalStackLayout>
+        <cm:CollectionView ItemsSource="{Binding Items}" Grid.Row="1" cm:ContextMenu.ClickCommand="{Binding NotifyCommand}" SelectionMode="Single">
+            <cm:ContextMenu.Menu>
+                <DataTemplate>
+                    <cm:Menu Title="{Binding Text}">
+                        <cm:Action Title="{Binding Text}" />
+                        <cm:Action Title="Upload documents" Icon="dotnet_bot.png" Command="{Binding CopyCommand}" />
+                        <cm:Group Title="{Binding Text}">
+                            <cm:Action Title="Start" Icon="dotnet_bot.png" Command="{Binding CopyCommand}" />
+                            <cm:Action Title="Stop" Icon="dotnet_bot.png" IsEnabled="False" Command="{Binding PasteCommand}" />
+                        </cm:Group>
+                        <cm:Menu Title="Clipboard">
+                            <cm:Action Title="Copy" Command="{Binding CopyCommand}" Icon="dotnet_bot.png" />
+                            <cm:Action Title="Paste" Command="{Binding PasteCommand}" Icon="dotnet_bot.png" />
+                        </cm:Menu>
+                    </cm:Menu>
+                </DataTemplate>
+            </cm:ContextMenu.Menu>
+            <cm:CollectionView.ItemsLayout>
+                <GridItemsLayout Orientation="Vertical" Span="3" />
+
+            </cm:CollectionView.ItemsLayout>
+            <cm:CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <ContentView Background="{Binding Color}" HeightRequest="{Binding CellHeight, Source={x:Reference this}}">
+                        <Label Text="{Binding Text}" Grid.Column="1" VerticalOptions="Center" HorizontalOptions="Center" TextColor="Black" />
+                    </ContentView>
+                </DataTemplate>
+            </cm:CollectionView.ItemTemplate>
+        </cm:CollectionView>
+    </Grid>
+</ContentPage>

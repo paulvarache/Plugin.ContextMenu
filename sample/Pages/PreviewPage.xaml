@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:cm="clr-namespace:Plugin.ContextMenu;assembly=Plugin.ContextMenu"
+             x:Class="Plugin.ContextMenu.Sample.Pages.PreviewPage"
+             Title="PreviewPage">
+    <ContentPage.Resources>
+        <cm:RoundedRectanglePreviewProvider CornerRadius="10, 20, 30, 40" x:Key="roundedCorners" />
+    </ContentPage.Resources>
+    <ScrollView>
+        <VerticalStackLayout Spacing="32" Padding="32">
+            <Label Text="Customise how the selected item is previewed" HorizontalTextAlignment="Center" FontSize="18" />
+            <ContentView HeightRequest="200" WidthRequest="200" Background="GreenYellow" cm:ContextMenu.PreviewProvider="{StaticResource roundedCorners}">
+                <cm:ContextMenu.Menu>
+                    <DataTemplate>
+                        <cm:Menu>
+                            <cm:Action Title="Upload documents" />
+                            <cm:Action Title="Copy" />
+                            <cm:Action Title="Paste" />
+                        </cm:Menu>
+                    </DataTemplate>
+                </cm:ContextMenu.Menu>
+                <Label Text="Customise the preview rounded corner" VerticalOptions="Center" HorizontalOptions="Center" />
+            </ContentView>
+            </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
