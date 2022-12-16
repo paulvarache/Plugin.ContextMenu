@@ -17,14 +17,14 @@
                 <DataTemplate>
                     <cm:Menu Title="{Binding Text}">
                         <cm:Action Title="{Binding Text}" />
-                        <cm:Action Title="Upload documents" Icon="dotnet_bot.png" Command="{Binding CopyCommand}" />
+                        <cm:Action Title="Upload documents" Icon="dotnet_bot.png" Command="{Binding NotifyCommand}" />
                         <cm:Group Title="{Binding Text}">
-                            <cm:Action Title="Start" Icon="dotnet_bot.png" Command="{Binding CopyCommand}" />
-                            <cm:Action Title="Stop" Icon="dotnet_bot.png" IsEnabled="False" Command="{Binding PasteCommand}" />
+                            <cm:Action Title="Start" Icon="dotnet_bot.png" Command="{Binding NotifyCommand}" />
+                            <cm:Action Title="Stop" Icon="dotnet_bot.png" IsEnabled="False" Command="{Binding NotifyCommand}" />
                         </cm:Group>
                         <cm:Menu Title="Clipboard">
-                            <cm:Action Title="Copy" Command="{Binding CopyCommand}" Icon="dotnet_bot.png" />
-                            <cm:Action Title="Paste" Command="{Binding PasteCommand}" Icon="dotnet_bot.png" />
+                            <cm:Action Title="Copy" Command="{Binding NotifyCommand}" Icon="dotnet_bot.png" />
+                            <cm:Action Title="Paste" Command="{Binding NotifyCommand}" Icon="dotnet_bot.png" />
                         </cm:Menu>
                     </cm:Menu>
                 </DataTemplate>

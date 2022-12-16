@@ -1,6 +1,6 @@
 ﻿using CoreGraphics;
 using Foundation;
-using Microsoft.Maui;
+using Microsoft.Maui.Graphics.Platform;
 using Microsoft.Maui.Platform;
 using UIKit;
 
@@ -222,6 +222,46 @@ public partial class ContextMenu
         }
         return null;
     }
+    public static UITargetedPreview CreateTargetedPreview(UIView target, UIContextMenuConfiguration configuration, object bindingContext, VisualElement visualElement)
+    {
+        var preview = ContextMenu.GetPreview(visualElement);
+
+        if (preview == null)
+        {
+            return null;
+        }
+
+        var parameters = new UIPreviewParameters();
+        if (preview.VisiblePath != null)
+        {
+            var bounds = target.Bounds.ToRectangle();
+            bounds = new Rect(
+                bounds.X + preview.Padding.Left,
+                bounds.Y + preview.Padding.Top,
+                bounds.Width - preview.Padding.HorizontalThickness,
+                bounds.Height - preview.Padding.VerticalThickness
+            );
+            parameters.VisiblePath = preview.VisiblePath.PathForBounds(bounds).AsUIBezierPath();
+        }
+        parameters.BackgroundColor = (preview.BackgroundColor ?? Colors.Transparent).ToPlatform();
+
+        if (preview.PreviewTemplate == null)
+        {
+            return new UITargetedPreview(target, parameters);
+        }
+        else
+        {
+            var inst = (VisualElement)preview.PreviewTemplate.CreateContent();
+            BindableObject.SetInheritedBindingContext(inst, bindingContext);
+
+            inst.Arrange(target.Bounds.ToRectangle());
+            inst.HeightRequest = target.Bounds.Height;
+            inst.WidthRequest = target.Bounds.Width;
+
+            return new UITargetedPreview(inst.ToPlatform(visualElement.Handler.MauiContext), parameters, new UIPreviewTarget(target, new CGPoint(target.Bounds.GetMidX(), target.Bounds.GetMidY())));
+        }
+
+    }
 }
 
 public class ContextMenuInteractionDelegate : UIKit.UIContextMenuInteractionDelegate
@@ -256,13 +296,7 @@ public class ContextMenuInteractionDelegate : UIKit.UIContextMenuInteractionDele
     {
         if (interaction.View is MauiView view)
         {
-            var previewProvider = ContextMenu.GetPreviewProvider((VisualElement)view.View);
-
-            if (previewProvider == null)
-            {
-                return null;
-            }
-            previewProvider.GetPreviewForHighlightingMenu(interaction, configuration);
+            return ContextMenu.CreateTargetedPreview(interaction.View, configuration, ((VisualElement)view.View).BindingContext, (VisualElement)view.View);
         }
         return null;
     }

@@ -27,10 +27,10 @@ public static partial class ContextMenu
             null,
             propertyChanged: MenuChanged);
 
-    public static readonly BindableProperty PreviewProviderProperty
+    public static readonly BindableProperty PreviewProperty
        = BindableProperty.CreateAttached(
-           "PreviewProvider",
-           typeof(IContextMenuPreviewProvider),
+           "Preview",
+           typeof(Preview),
            typeof(VisualElement),
            null);
 
@@ -132,15 +132,16 @@ public static partial class ContextMenu
     {
         view.SetValue(MenuProperty, value);
     }
-    public static IContextMenuPreviewProvider GetPreviewProvider(BindableObject view)
+    public static Preview GetPreview(BindableObject view)
     {
-        return (IContextMenuPreviewProvider)view.GetValue(PreviewProviderProperty);
+        return (Preview)view.GetValue(PreviewProperty);
     }
 
-    public static void SetPreviewProvider(BindableObject view, IContextMenuPreviewProvider value)
+    public static void SetPreview(BindableObject view, Preview value)
     {
-        view.SetValue(PreviewProviderProperty, value);
+        view.SetValue(PreviewProperty, value);
     }
+
     public static object GetClickCommandParameter(BindableObject view)
     {
         return view.GetValue(ClickCommandParameterProperty);

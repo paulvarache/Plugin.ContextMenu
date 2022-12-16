@@ -59,12 +59,10 @@
 	  <None Remove="Controls\" />
 	  <None Remove="Handlers\" />
 	  <None Remove="Interfaces\" />
-	  <None Remove="PreviewProviders\" />
 	</ItemGroup>
 	<ItemGroup>
 	  <Folder Include="Controls\" />
 	  <Folder Include="Handlers\" />
 	  <Folder Include="Interfaces\" />
-	  <Folder Include="PreviewProviders\" />
 	</ItemGroup>
 </Project>

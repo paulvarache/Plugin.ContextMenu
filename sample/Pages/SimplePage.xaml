@@ -3,15 +3,16 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:cm="clr-namespace:Plugin.ContextMenu;assembly=Plugin.ContextMenu"
              x:Class="Plugin.ContextMenu.Sample.Pages.SimplePage"
-             Title="Simple">
-    <ScrollView>
+             Title="Simple"
+             x:Name="this">
+    <ScrollView BindingContext="{x:Reference this}">
         <VerticalStackLayout Spacing="32" Padding="32">
             <Label Text="Add a context menu to any view:" HorizontalTextAlignment="Center" FontSize="18" />
             <ContentView HeightRequest="200" WidthRequest="200" Background="GreenYellow">
                 <cm:ContextMenu.Menu>
                     <DataTemplate>
                         <cm:Menu>
-                            <cm:Action Title="Upload documents" />
+                            <cm:Action Title="Upload documents" Command="{Binding RunActionCommand}" CommandParameter="Hello" />
                             <cm:Action Title="Copy" />
                             <cm:Action Title="Paste" />
                             <cm:Action Title="Secret" IsVisible="False" />

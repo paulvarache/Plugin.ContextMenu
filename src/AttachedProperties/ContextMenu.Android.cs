@@ -7,11 +7,16 @@ using Microsoft.Maui.Platform;
 using Android.Graphics.Drawables;
 using Android.Graphics;
 using Android.Util;
+using Android.Content;
+using Java.Lang;
 
 namespace Plugin.ContextMenu;
 
 public static partial class ContextMenu
 {
+    public const float LongPressScaleFactor = .95f;
+    public const int LongPressShrinkDelay = 100;
+
     public static readonly BindableProperty ChildElementsProperty = BindableProperty.CreateAttached("ChildElements", typeof(List<VisualElement>), typeof(VisualElement), new List<VisualElement>());
     public static void RegisterChildElement(BindableObject bindable, VisualElement element)
     {
@@ -63,12 +68,14 @@ public static partial class ContextMenu
         if (showOnClick)
         {
             aview.Clickable = true;
-            aview.SetOnClickListener(new MenuActionListener(propertySource, visualElement));
+            aview.SetOnClickListener(new MenuActionListener(propertySource, visualElement, aview));
         }
         else
         {
             aview.LongClickable = true;
-            aview.SetOnLongClickListener(new MenuActionListener(propertySource, visualElement));
+            var listener = new MenuActionListener(propertySource, visualElement, aview);
+            aview.SetOnTouchListener(listener);
+            aview.SetOnLongClickListener(listener);
         }
     }
     public static void DetachMenuFromView(VisualElement visualElement)
@@ -166,6 +173,10 @@ public static partial class ContextMenu
         if (action.Icon != null)
         {
             var id = Platform.CurrentActivity.GetDrawableId(((IFileImageSource)action.Icon).File);
+            if (id == 0)
+            {
+                return;
+            }
             var drawable = Platform.CurrentActivity.GetDrawable(id);
             var size = (int)DpToPixel(32f);
             var bitmap = ScaleBitmap(((BitmapDrawable)drawable).Bitmap, size, size);
@@ -230,44 +241,21 @@ public static partial class ContextMenu
     }
 }
 
-
-public class ContextMenuListener : Java.Lang.Object, IOnCreateContextMenuListener
+internal class ShrinkContextMenuTarget : Java.Lang.Object, IRunnable
 {
-    readonly VisualElement _visualElement;
+    private AView _target;
 
-    public ContextMenuListener(VisualElement visualElement) : base()
+    public ShrinkContextMenuTarget(AView target)
     {
-        _visualElement = visualElement;
+        _target = target;
     }
-
-    public void OnCreateContextMenu(Android.Views.IContextMenu amenu, AView v, Android.Views.IContextMenuContextMenuInfo menuInfo)
+    public void Run()
     {
-        var menuTemplate = ContextMenu.GetMenu(_visualElement);
-
-        var content = menuTemplate.CreateContent();
-
-        if (content is Menu menu)
-        {
-            BindableObject.SetInheritedBindingContext(menu, _visualElement.BindingContext);
-
-            if (!string.IsNullOrEmpty(menu.Title))
-            {
-                amenu.SetHeaderTitle(menu.Title);
-            }
-
-            foreach (var item in menu.Children)
-            {
-                ContextMenu.AddRootMenuItem(item, amenu);
-            }
-#if ANDROID28_0_OR_GREATER
-            amenu.SetGroupDividerEnabled(true);
-#endif
-        }
-        else
-        {
-            throw new NotSupportedException("Only Menus can be used in a MenuTemplate");
-        }
-
+        _target.Animate()
+            .ScaleX(ContextMenu.LongPressScaleFactor)
+            .ScaleY(ContextMenu.LongPressScaleFactor)
+            .SetDuration(ViewConfiguration.LongPressTimeout - ContextMenu.LongPressShrinkDelay)
+            .Start();
     }
 }
 
@@ -305,16 +293,18 @@ public class OnClickListener : Java.Lang.Object, IOnClickListener
     }
 }
 
-public class MenuActionListener : Java.Lang.Object, IOnLongClickListener, IOnClickListener
+public class MenuActionListener : Java.Lang.Object, IOnLongClickListener, IOnClickListener, IOnTouchListener
 {
-    private BindableObject _propertyOwner;
-    private BindableObject _contextOwner;
+    BindableObject _propertyOwner;
+    BindableObject _contextOwner;
+    ShrinkContextMenuTarget _shrink;
 
 
-    public MenuActionListener(BindableObject propertyOnwer, BindableObject contextOwner) : base()
+    public MenuActionListener(BindableObject propertyOnwer, BindableObject contextOwner, AView target) : base()
     {
         _propertyOwner = propertyOnwer;
         _contextOwner = contextOwner;
+        _shrink = new ShrinkContextMenuTarget(target);
     }
 
     public void OnClick(AView v)
@@ -324,14 +314,41 @@ public class MenuActionListener : Java.Lang.Object, IOnLongClickListener, IOnCli
 
     public bool OnLongClick(AView v)
     {
+        v.Animate().Cancel();
+        v.ScaleX = 1f;
+        v.ScaleY = 1f;
         ShowMenu(v);
         return true;
     }
 
+    public bool OnTouch(AView v, MotionEvent e)
+    {
+        if (!v.LongClickable)
+        {
+            return false;
+        }
+        switch (e.Action)
+        {
+            case MotionEventActions.Down:
+                v.Handler.PostDelayed(_shrink, 100);
+                break;
+            case MotionEventActions.Up:
+            case MotionEventActions.Cancel:
+                v.Handler.RemoveCallbacks(_shrink);
+                break;
+        }
+        return false;
+    }
+
     public void ShowMenu(AView aview)
     {
-        var amenu = new PopupMenu(Platform.CurrentActivity, aview);
-        amenu.SetForceShowIcon(true);
+        ContextMenuWindow w = null;
+        if (_propertyOwner is VisualElement visualElement)
+        {
+            var preview = ContextMenu.GetPreview(visualElement);
+
+            w = new ContextMenuWindow(Platform.CurrentActivity, aview, preview);
+        }
 
         var menuTemplate = ContextMenu.GetMenu(_propertyOwner);
 
@@ -341,41 +358,17 @@ public class MenuActionListener : Java.Lang.Object, IOnLongClickListener, IOnCli
         {
             BindableObject.SetInheritedBindingContext(menu, _contextOwner.BindingContext);
 
-            if (!string.IsNullOrEmpty(menu.Title))
-            {
-                //amenu.Menu.SetHeaderTitle(menu.Title);
-            }
-
             foreach (var item in menu.Children)
             {
-                ContextMenu.AddRootMenuItem(item, amenu.Menu);
+                ContextMenu.AddRootMenuItem(item, w.Menu);
             }
 #if ANDROID28_0_OR_GREATER
-            amenu.Menu.SetGroupDividerEnabled(true);
+            w.Menu.SetGroupDividerEnabled(true);
 #endif
+
+
+            w.Show();
         }
 
-        amenu.Show();
-        //var anim = new Android.Views.Animations.ScaleAnimation(
-        //    1f, 1.3f, // Start and end values for the X axis scaling
-        //    1f, 1.3f, // Start and end values for the Y axis scaling
-        //    Android.Views.Animations.Dimension.RelativeToSelf, .5f, // Pivot point of X scaling
-        //    Android.Views.Animations.Dimension.RelativeToSelf, .5f);
-        //anim.FillAfter = true; // Needed to keep the result of the animation
-        //anim.Duration = 1000;
-        //aview.BringToFront();
-        //aview.Elevation = 2;
-
-        //aview.StartAnimation(anim);
-        //aview.Animation.AnimationEnd += (s, e) =>
-        //{
-        //    amenu.Show();
-        //    void onDismiss(object sender, EventArgs e)
-        //    {
-        //        amenu.DismissEvent -= onDismiss;
-        //        aview.ClearAnimation();
-        //    }
-        //    amenu.DismissEvent += onDismiss;
-        //};
     }
 }

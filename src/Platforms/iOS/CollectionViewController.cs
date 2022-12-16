@@ -12,4 +12,22 @@ public class CollectionViewController : ReorderableItemsViewController<Reorderab
     {
         return new CollectionViewDelegator(ItemsViewLayout, this);
     }
+
+    protected override void UpdateDefaultCell(DefaultCell cell, NSIndexPath indexPath)
+    {
+        base.UpdateDefaultCell(cell, indexPath);
+        if (ItemsView.SelectionMode == SelectionMode.None)
+        {
+            cell.SelectedBackgroundView = null;
+        }
+    }
+
+    protected override void UpdateTemplatedCell(TemplatedCell cell, NSIndexPath indexPath)
+    {
+        base.UpdateTemplatedCell(cell, indexPath);
+        if (ItemsView.SelectionMode == SelectionMode.None)
+        {
+            cell.SelectedBackgroundView = null;
+        }
+    }
 }
