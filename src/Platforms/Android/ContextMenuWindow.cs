@@ -3,7 +3,6 @@ using Android.Animation;
 using Android.Content;
 using Android.Graphics;
 using Android.Graphics.Drawables;
-using Android.Hardware;
 using Android.OS;
 using Android.Runtime;
 using Android.Views;
@@ -11,6 +10,7 @@ using Android.Widget;
 using AndroidX.Core.View;
 using Kotlin.Jvm.Functions;
 using Microsoft.Maui.Graphics.Platform;
+using Microsoft.Maui.Platform;
 using AView = Android.Views.View;
 
 namespace Plugin.ContextMenu;
@@ -24,8 +24,10 @@ internal class ContextMenuBackgroundView : FrameLayout
     protected override void OnAttachedToWindow()
     {
         base.OnAttachedToWindow();
-        Background = new ColorDrawable(Android.Graphics.Color.Gray);
-        Background.Alpha = 244;
+        var color = Application.Current.GetResourceOrDefault(ContextMenu.PreviewWindowBackgroundColorResource, Colors.Gray);
+        var opacity = Application.Current.GetResourceOrDefault(ContextMenu.PreviewWindowBackgroundColorResource, .05f);
+        Background = new ColorDrawable(color.ToPlatform());
+        Background.Alpha = (int)Math.Round(255 - opacity * 255);
     }
 
     public override bool OnTouchEvent(MotionEvent e)
@@ -133,66 +135,7 @@ internal class ContextMenuWindow
     public const int ShowAnimationDuration = 200;
     public const int ContextMenuSpacing = 16;
     public const int ContextMenuEdgeSpacing = 16;
-    internal class ContextMenuWindowShowAnimatorListener : Java.Lang.Object, Android.Animation.Animator.IAnimatorListener
-    {
-        ContextMenuWindow _window;
 
-        public ContextMenuWindowShowAnimatorListener(ContextMenuWindow window)
-        {
-            _window = window;
-        }
-        public void OnAnimationCancel(Animator animation)
-        {
-
-        }
-
-        public void OnAnimationEnd(Animator animation)
-        {
-            _window._menu.Show(0, ViewUtils.DpToPx(ContextMenuWindow.ContextMenuSpacing));
-        }
-
-        public void OnAnimationRepeat(Animator animation)
-        {
-
-        }
-
-        public void OnAnimationStart(Animator animation)
-        {
-
-        }
-    }
-    internal class ContextMenuWindowHideAnimatorListener : Java.Lang.Object, Android.Animation.Animator.IAnimatorListener
-    {
-        ContextMenuWindow _window;
-
-        public ContextMenuWindowHideAnimatorListener(ContextMenuWindow window)
-        {
-            _window = window;
-        }
-        public void OnAnimationCancel(Animator animation)
-        {
-
-        }
-
-        public void OnAnimationEnd(Animator animation)
-        {
-            _window._parent.Visibility = ViewStates.Visible;
-            if (_window._decorView.Parent != null)
-            {
-                _window._windowManager.RemoveView(_window._decorView);
-            }
-        }
-
-        public void OnAnimationRepeat(Animator animation)
-        {
-
-        }
-
-        public void OnAnimationStart(Animator animation)
-        {
-
-        }
-    }
     Context _context;
     IWindowManager _windowManager;
     FrameLayout _decorView;
@@ -262,8 +205,15 @@ internal class ContextMenuWindow
             .ScaleX(1)
             .ScaleY(1)
             .Y(pos[1])
-            .SetListener(new ContextMenuWindowHideAnimatorListener(this))
             .SetDuration(DismissAnimationDuration)
+            .WithEndAction(() =>
+            {
+                _parent.Visibility = ViewStates.Visible;
+                if (_decorView.Parent != null)
+                {
+                    _windowManager.RemoveView(_decorView);
+                }
+            })
             .Start();
 
         AnimateBackgroundOut();
@@ -338,8 +288,12 @@ internal class ContextMenuWindow
             .ScaleX(1)
             .ScaleY(1)
             .Y(endY)
-            .SetListener(new ContextMenuWindowShowAnimatorListener(this))
-            .SetDuration(ShowAnimationDuration);
+            .SetDuration(ShowAnimationDuration)
+            .WithEndAction(() =>
+            {
+                _menu.Show(0, ViewUtils.DpToPx(ContextMenuWindow.ContextMenuSpacing));
+            })
+            .Start();
 
         AnimateBackgroundIn();
     }

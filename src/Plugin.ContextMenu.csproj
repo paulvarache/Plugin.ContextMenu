@@ -64,5 +64,6 @@
 	  <Folder Include="Controls\" />
 	  <Folder Include="Handlers\" />
 	  <Folder Include="Interfaces\" />
+	  <Folder Include="Services\" />
 	</ItemGroup>
 </Project>

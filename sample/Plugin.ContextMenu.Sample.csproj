@@ -59,6 +59,7 @@
 
 	<ItemGroup>
 	  <None Remove="Pages\" />
+	  <None Remove="Resources\Images\cm_android_submenu_icon.svg" />
 	</ItemGroup>
 	<ItemGroup>
 	  <MauiXaml Update="Pages\ClickCommandPage.xaml">

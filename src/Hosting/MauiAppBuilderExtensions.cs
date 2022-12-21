@@ -1,4 +1,6 @@
-﻿namespace Plugin.ContextMenu;
+﻿using Microsoft.Extensions.DependencyInjection.Extensions;
+
+namespace Plugin.ContextMenu;
 
 public static class MauiAppBuilderExtensions
 {

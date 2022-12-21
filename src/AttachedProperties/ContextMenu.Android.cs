@@ -1,5 +1,4 @@
 ﻿using Android.Views;
-using Android.Widget;
 using static Android.Views.View;
 using AView = Android.Views.View;
 using AndroidX.Core.View;
@@ -7,8 +6,8 @@ using Microsoft.Maui.Platform;
 using Android.Graphics.Drawables;
 using Android.Graphics;
 using Android.Util;
-using Android.Content;
 using Java.Lang;
+using Android.Content.Res;
 
 namespace Plugin.ContextMenu;
 
@@ -16,6 +15,11 @@ public static partial class ContextMenu
 {
     public const float LongPressScaleFactor = .95f;
     public const int LongPressShrinkDelay = 100;
+
+    public const string PreviewWindowBackgroundColorResource = "AndroidContextMenuPreviewWindowBackgroundColor";
+    public const string PreviewWindowBackgroundOpacityResource = "AndroidContextMenuPreviewWindowBackgroundOpacity";
+    public const string ContextMenuBackgroundColorResource = "AndroidContextMenuContextMenuBackgroundColor";
+    public const string ContextMenuCornerRadiusResource = "AndroidContextMenuContextMenuCornerRadius";
 
     public static readonly BindableProperty ChildElementsProperty = BindableProperty.CreateAttached("ChildElements", typeof(List<VisualElement>), typeof(VisualElement), new List<VisualElement>());
     public static void RegisterChildElement(BindableObject bindable, VisualElement element)
@@ -184,12 +188,27 @@ public static partial class ContextMenu
             item.SetIcon(r);
         }
     }
+    public static void SetIsDestructive(IMenuItem item, Action action)
+    {
+        if (action.IsDestructive && action.IsEnabled)
+        {
+            item.SetIconTintList(new ColorStateList(new int[][]
+            {
+                new int[] {  }
+            },
+            new int[]
+            {
+                Microsoft.Maui.Graphics.Color.FromArgb("#F44336").ToPlatform()
+            }));
+        }
+    }
     public static void AddAction(Action action, IMenu amenu)
     {
         var item = amenu.Add(action.Title);
         item.SetVisible(action.IsVisible);
         item.SetEnabled(action.IsEnabled);
         SetActionIcon(item, action);
+        SetIsDestructive(item, action);
         MenuItemCompat.SetContentDescription(item, action.Title);
         item.SetOnMenuItemClickListener(new MenuItemClickListener(action));
     }
@@ -209,6 +228,7 @@ public static partial class ContextMenu
             AddRootMenuItem(item, submenu);
         }
     }
+
     public static void AddGroupItem(MenuElement item, IMenu amenu, int groupId, int itemId)
     {
         if (item is Action action)
@@ -230,6 +250,8 @@ public static partial class ContextMenu
         item.SetEnabled(action.IsEnabled);
         item.SetVisible(action.IsVisible);
         SetActionIcon(item, action);
+        SetIsDestructive(item, action);
+        item.SetOnMenuItemClickListener(new MenuItemClickListener(action));
     }
     public static void AddGroupMenu(Menu menu, IMenu amenu, int groupId, int itemId)
     {

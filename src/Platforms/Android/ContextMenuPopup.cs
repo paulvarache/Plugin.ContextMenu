@@ -6,8 +6,7 @@ using Android.Widget;
 using AndroidX.AppCompat.View.Menu;
 using AndroidX.RecyclerView.Widget;
 using Java.Lang;
-using Microsoft.Maui.Controls.Compatibility.Platform.Android;
-using static Android.Icu.Text.CaseMap;
+using Microsoft.Maui.Platform;
 using AView = Android.Views.View;
 
 namespace Plugin.ContextMenu;
@@ -28,6 +27,7 @@ internal class ContextMenuItemView : LinearLayout
 {
     Context _context;
     TextView _text;
+    Android.Content.Res.ColorStateList _defaultTintList;
     ImageView _image;
     AView _divider;
 
@@ -39,29 +39,31 @@ internal class ContextMenuItemView : LinearLayout
 
     void Setup()
     {
-        var rootLayout = new LinearLayout(_context)
-        {
-            Orientation = Orientation.Vertical
-        };
 
-        _divider = new AView(_context);
-        _divider.Background = new ColorDrawable(Android.Graphics.Color.Black);
-        _divider.Alpha = .4f;
-
-        rootLayout.AddView(_divider, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MatchParent, 1));
-
-        LayoutParameters = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MatchParent, LinearLayout.LayoutParams.WrapContent);
         var outValue = new TypedValue();
         _context.Theme.ResolveAttribute(Resource.Attribute.selectableItemBackground, outValue, true);
+        Orientation = Orientation.Vertical;
+        LayoutParameters = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MatchParent, LinearLayout.LayoutParams.WrapContent);
+
+        _divider = new ImageView(_context)
+        {
+            Background = _context.Resources.GetDrawable(Android.Resource.Drawable.DividerHorizontalBright),
+        };
+
+        AddView(_divider, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MatchParent, ViewUtils.DpToPx(1))
+        {
+            TopMargin = ViewUtils.DpToPx(4),
+            BottomMargin = ViewUtils.DpToPx(4),
+        });
+
         var layout = new LinearLayout(_context)
         {
-            LayoutParameters = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MatchParent, LinearLayout.LayoutParams.MatchParent),
-            Foreground = _context.GetDrawable(outValue.ResourceId),
+            LayoutParameters = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WrapContent, LinearLayout.LayoutParams.WrapContent),
             Orientation = Orientation.Horizontal,
+            Foreground = _context.GetDrawable(outValue.ResourceId)
         };
         layout.SetGravity(GravityFlags.CenterVertical);
         layout.SetPadding(ViewUtils.DpToPx(16), ViewUtils.DpToPx(13), ViewUtils.DpToPx(16), ViewUtils.DpToPx(13));
-
 
         _text = new TextView(_context)
         {
@@ -70,6 +72,8 @@ internal class ContextMenuItemView : LinearLayout
                 Weight = 1
             },
         };
+
+        _defaultTintList = _text.TextColors;
 
         layout.AddView(_text);
 
@@ -85,12 +89,9 @@ internal class ContextMenuItemView : LinearLayout
             ImportantForAccessibility = ImportantForAccessibility.No,
         };
 
-
         layout.AddView(_image);
 
-        rootLayout.AddView(layout, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MatchParent, LinearLayout.LayoutParams.WrapContent));
-
-        AddView(rootLayout, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MatchParent, LinearLayout.LayoutParams.WrapContent));
+        AddView(layout, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MatchParent, LinearLayout.LayoutParams.WrapContent));
     }
     public override bool Enabled
     {
@@ -109,12 +110,33 @@ internal class ContextMenuItemView : LinearLayout
 
     public void SetIcon(Drawable icon)
     {
-        _image.SetImageDrawable(icon);
+        if (icon == null)
+        {
+            _image.Visibility = ViewStates.Gone;
+        }
+        else
+        {
+            _image.Visibility = ViewStates.Visible;
+            _image.SetImageDrawable(icon);
+        }
     }
 
     public void SetGroupDividerEnabled(bool enabled)
     {
         _divider.Visibility = enabled ? ViewStates.Visible : ViewStates.Gone;
+    }
+
+    public void SetTintList(Android.Content.Res.ColorStateList tintList)
+    {
+        if (tintList != null)
+        {
+            _text.SetTextColor(tintList);
+            _image.ImageTintList = tintList;
+        } else
+        {
+            _text.SetTextColor(_defaultTintList);
+            _image.ImageTintList = _defaultTintList;
+        }
     }
 }
 
@@ -149,6 +171,12 @@ internal class ContextMenuViewAdapter : RecyclerView.Adapter
         _menu = menu;
     }
 
+    Drawable GetDefaultSubMenuIconDrawable()
+    {
+        var id = _context.GetDrawableId("cm_android_submenu_icon.png");
+        return id != 0 ? _context.GetDrawable(id) : null;
+    }
+
     public override void OnBindViewHolder(RecyclerView.ViewHolder holder, int position)
     {
         if (holder is ContextMenuViewAdapter.ViewHolder h && h.ItemView is ContextMenuItemView view)
@@ -158,12 +186,13 @@ internal class ContextMenuViewAdapter : RecyclerView.Adapter
             view.Enabled = item.IsEnabled;
             if (item.HasSubMenu)
             {
-
+                view.SetIcon(GetDefaultSubMenuIconDrawable());
             }
             else
             {
                 view.SetIcon(item.Icon);
             }
+            view.SetTintList(item.IconTintList);
             h.Clicked += OnItemClicked;
 
             var currGroupId = item.GroupId;
@@ -231,6 +260,8 @@ internal class ContextMenuPopup : PopupWindow
         _parent = parent;
         _parent.DismissEvent += OnParentClosed;
         Setup(anchor, subMenu);
+        OutsideTouchable = false;
+        Focusable = true;
     }
 
     private void OnParentClosed(object sender, EventArgs e)
@@ -253,21 +284,23 @@ internal class ContextMenuPopup : PopupWindow
         _recyclerView.SetLayoutManager(new LinearLayoutManager(anchor.Context));
         ContentView = _recyclerView;
 
+        var backgroundColor = Application.Current.GetResourceOrDefault<Color>(ContextMenu.ContextMenuBackgroundColorResource, null);
+        var cornerRadius = Application.Current.GetResourceOrDefault(ContextMenu.ContextMenuCornerRadiusResource, new CornerRadius(18));
+
         var s = new Android.Graphics.Drawables.ShapeDrawable(new Android.Graphics.Drawables.Shapes.RoundRectShape(new float[] {
-            ViewUtils.DpToPx(18),
-            ViewUtils.DpToPx(18),
-            ViewUtils.DpToPx(18),
-            ViewUtils.DpToPx(18),
-            ViewUtils.DpToPx(18),
-            ViewUtils.DpToPx(18),
-            ViewUtils.DpToPx(18),
-            ViewUtils.DpToPx(18)
+            ViewUtils.DpToPx((int)cornerRadius.TopLeft),
+            ViewUtils.DpToPx((int)cornerRadius.TopLeft),
+            ViewUtils.DpToPx((int)cornerRadius.TopRight),
+            ViewUtils.DpToPx((int)cornerRadius.TopRight),
+            ViewUtils.DpToPx((int)cornerRadius.BottomRight),
+            ViewUtils.DpToPx((int)cornerRadius.BottomRight),
+            ViewUtils.DpToPx((int)cornerRadius.BottomLeft),
+            ViewUtils.DpToPx((int)cornerRadius.BottomLeft)
         }, null, null));
-        s.Paint.Color = Android.Graphics.Color.White;
+        s.Paint.Color = backgroundColor != null ? backgroundColor.ToPlatform() : new Android.Graphics.Color(_anchor.Context.GetColor(Android.Resource.Color.BackgroundLight));
         SetBackgroundDrawable(s);
         ContentView.Background = s;
         ContentView.ClipToOutline = true;
-        OutsideTouchable = true;
         // TODO: increase to 9 if submenu, and add 1 for each level of submenu
         Elevation = ViewUtils.DpToPx(8);
 
@@ -275,28 +308,22 @@ internal class ContextMenuPopup : PopupWindow
         _adapter.SubMenuSelected += OnSubMenuSelected;
     }
 
-    private void OnSubMenuSelected(object sender, SubMenuSelectedEventArgs e)
+    void OnSubMenuSelected(object sender, SubMenuSelectedEventArgs e)
     {
         var p = new ContextMenuPopup(e.View, e.Builder, this);
         p.Show(0, 0);
     }
 
-    public override void Dismiss()
+    void OnActionSelected(object sender, EventArgs e)
     {
-        base.Dismiss();
         _parent?.Dismiss();
-    }
-
-    private void OnActionSelected(object sender, EventArgs e)
-    {
         Dismiss();
     }
 
     public IMenu Menu => _menu;
     public void Show(int offsetX, int offsetY)
     {
-        _adapter.NotifyDataSetChanged();
-        ShowAsDropDown(_anchor, offsetX, offsetY, GravityFlags.Top | GravityFlags.Start);
+        ShowAsDropDown(_anchor, offsetX, offsetY, GravityFlags.NoGravity);
     }
 
     public int GetHeight()
@@ -304,4 +331,5 @@ internal class ContextMenuPopup : PopupWindow
         ContentView.Measure((int)MeasureSpecMode.Unspecified, (int)MeasureSpecMode.Unspecified);
         return ContentView.MeasuredHeight;
     }
+
 }
