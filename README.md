@@ -1,3 +1,6 @@
+<img src="screenshots/ios.png?raw=true" height="480" />
+<img src="screenshots/android.png?raw=true" height="480" />
+
 # .NET MAUI Context Menu plugin
 
 The .NET MAUI Context menu plugin adds the ability to add context menus to your application.
@@ -234,3 +237,5 @@ A [MenuBuilder](https://developer.android.com/reference/android/view/Menu) is st
 ## TODO:
 
  - Allows for the specification of the icon color. This woul let developer choose whether their icons will match the text color or use the icon's colors.
+ - Windows support
+ - macOS support

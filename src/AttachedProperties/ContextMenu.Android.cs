@@ -138,21 +138,23 @@ public static partial class ContextMenu
         }
     }
 
-    public static void AddRootMenuItem(MenuElement item, IMenu amenu)
+    public static (int, int) AddRootMenuItem(MenuElement item, IMenu amenu, int rootGroupId, int rootId)
     {
-        var id = 0;
         if (item is Action action)
         {
-            AddAction(action, amenu);
+            AddAction(action, amenu, rootGroupId, rootId++);
         }
         else if (item is Group group)
         {
-            AddGroup(group, amenu, ++id);
+            rootGroupId++;
+            rootId = AddGroup(group, amenu, rootGroupId, rootId++);
+            rootGroupId++;
         }
         else if (item is Menu menu)
         {
-            AddSubmenu(menu, amenu, ++id);
+            AddSubmenu(menu, amenu, rootGroupId++, rootId++);
         }
+        return (rootGroupId, rootId);
     }
     static float DpToPixel(float dp)
     {
@@ -202,30 +204,33 @@ public static partial class ContextMenu
             }));
         }
     }
-    public static void AddAction(Action action, IMenu amenu)
+    public static void AddAction(Action action, IMenu amenu, int groupId, int itemId)
     {
-        var item = amenu.Add(action.Title);
-        item.SetVisible(action.IsVisible);
+        var item = amenu.Add(groupId, itemId, itemId, action.Title);
         item.SetEnabled(action.IsEnabled);
+        item.SetVisible(action.IsVisible);
         SetActionIcon(item, action);
         SetIsDestructive(item, action);
-        MenuItemCompat.SetContentDescription(item, action.Title);
         item.SetOnMenuItemClickListener(new MenuItemClickListener(action));
     }
-    public static void AddGroup(Group group, IMenu amenu, int groupId)
+    public static int AddGroup(Group group, IMenu amenu, int groupId, int itemId)
     {
-        var itemId = 0;
         foreach (var item in group.Children)
         {
-            AddGroupItem(item, amenu, groupId, ++itemId);
+            AddGroupItem(item, amenu, groupId, itemId++);
         }
+        return itemId;
     }
-    public static void AddSubmenu(Menu menu, IMenu amenu, int itemId)
+    public static void AddSubmenu(Menu menu, IMenu amenu, int groupId, int itemId)
     {
-        var submenu = amenu.AddSubMenu(menu.Title);
+        var submenu = amenu.AddSubMenu(groupId, itemId, itemId, menu.Title);
+        var rootGroupId = 0;
+        var rootItemId = 0;
         foreach (var item in menu.Children)
         {
-            AddRootMenuItem(item, submenu);
+            var ids = AddRootMenuItem(item, submenu, rootGroupId, rootItemId);
+            rootGroupId = ids.Item1;
+            rootItemId = ids.Item2;
         }
     }
 
@@ -233,7 +238,7 @@ public static partial class ContextMenu
     {
         if (item is Action action)
         {
-            AddGroupAction(action, amenu, groupId, itemId);
+            AddAction(action, amenu, groupId, itemId);
         }
         else if (item is Group group)
         {
@@ -244,21 +249,16 @@ public static partial class ContextMenu
             AddGroupMenu(menu, amenu, groupId, itemId);
         }
     }
-    public static void AddGroupAction(Action action, IMenu amenu, int groupId, int itemId)
-    {
-        var item = amenu.Add(groupId, itemId, itemId, action.Title);
-        item.SetEnabled(action.IsEnabled);
-        item.SetVisible(action.IsVisible);
-        SetActionIcon(item, action);
-        SetIsDestructive(item, action);
-        item.SetOnMenuItemClickListener(new MenuItemClickListener(action));
-    }
     public static void AddGroupMenu(Menu menu, IMenu amenu, int groupId, int itemId)
     {
         var submenu = amenu.AddSubMenu(groupId, itemId, itemId, menu.Title);
+        var rootGroupId = 0;
+        var rootItemId = 0;
         foreach (var item in menu.Children)
         {
-            AddRootMenuItem(item, submenu);
+            var ids = AddRootMenuItem(item, submenu, rootGroupId, rootItemId);
+            rootGroupId = ids.Item1;
+            rootItemId = ids.Item2;
         }
     }
 }
@@ -380,9 +380,14 @@ public class MenuActionListener : Java.Lang.Object, IOnLongClickListener, IOnCli
         {
             BindableObject.SetInheritedBindingContext(menu, _contextOwner.BindingContext);
 
+            var rootGroupId = 0;
+            var rootId = 0;
+
             foreach (var item in menu.Children)
             {
-                ContextMenu.AddRootMenuItem(item, w.Menu);
+                var ids = ContextMenu.AddRootMenuItem(item, w.Menu, rootGroupId, rootId);
+                rootGroupId = ids.Item1;
+                rootId = ids.Item2;
             }
 #if ANDROID28_0_OR_GREATER
             w.Menu.SetGroupDividerEnabled(true);
