@@ -67,6 +67,7 @@ internal class ContextMenuItemView : LinearLayout
 
         _text = new TextView(_context)
         {
+            DuplicateParentStateEnabled = true,
             LayoutParameters = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WrapContent)
             {
                 Weight = 1
@@ -132,10 +133,25 @@ internal class ContextMenuItemView : LinearLayout
         {
             _text.SetTextColor(tintList);
             _image.ImageTintList = tintList;
-        } else
+        }
+        else
         {
             _text.SetTextColor(_defaultTintList);
             _image.ImageTintList = _defaultTintList;
+        }
+    }
+
+    internal void SetIsVisible(bool isVisible)
+    {
+        if (isVisible)
+        {
+            Visibility = ViewStates.Visible;
+            LayoutParameters.Height = LinearLayout.LayoutParams.WrapContent;
+        }
+        else
+        {
+            Visibility = ViewStates.Gone;
+            LayoutParameters.Height = 0;
         }
     }
 }
@@ -182,23 +198,27 @@ internal class ContextMenuViewAdapter : RecyclerView.Adapter
         if (holder is ContextMenuViewAdapter.ViewHolder h && h.ItemView is ContextMenuItemView view)
         {
             var item = _menu.GetItem(position);
-            view.SetTitle(item.TitleFormatted);
-            view.Enabled = item.IsEnabled;
-            if (item.HasSubMenu)
+            view.SetIsVisible(item.IsVisible);
+            if (item.IsVisible)
             {
-                view.SetIcon(GetDefaultSubMenuIconDrawable());
-            }
-            else
-            {
-                view.SetIcon(item.Icon);
-            }
-            view.SetTintList(item.IconTintList);
-            h.Clicked += OnItemClicked;
+                view.SetTitle(item.TitleFormatted);
+                view.Enabled = item.IsEnabled;
+                if (item.HasSubMenu)
+                {
+                    view.SetIcon(GetDefaultSubMenuIconDrawable());
+                }
+                else
+                {
+                    view.SetIcon(item.Icon);
+                }
+                view.SetTintList(item.IconTintList);
+                h.Clicked += OnItemClicked;
 
-            var currGroupId = item.GroupId;
-            var prevGroupId = position - 1 >= 0 ? _menu.GetItem(position - 1).GroupId : currGroupId;
+                var currGroupId = item.GroupId;
+                var prevGroupId = position - 1 >= 0 ? _menu.GetItem(position - 1).GroupId : currGroupId;
 
-            view.SetGroupDividerEnabled(currGroupId != prevGroupId);
+                view.SetGroupDividerEnabled(currGroupId != prevGroupId);
+            }
         }
     }
 
@@ -269,9 +289,14 @@ internal class ContextMenuPopup : PopupWindow
         Dismiss();
     }
 
-    public ContextMenuPopup(AView anchor) : base(anchor.Context)
+    public ContextMenuPopup(AView anchor, bool closeOnOutsideClick = false) : base(anchor.Context)
     {
         Setup(anchor, new MenuBuilder(anchor.Context));
+        if (closeOnOutsideClick)
+        {
+            OutsideTouchable = false;
+            Focusable = true;
+        }
     }
 
     void Setup(AView anchor, MenuBuilder menu)

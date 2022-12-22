@@ -169,13 +169,6 @@ public static partial class ContextMenu
     }
     public static void SetActionIcon(IMenuItem item, Action action)
     {
-        //if (action.SystemIcon != null)
-        //{
-        //    //var id = Android.Content.Res.Resources.System.GetIdentifier("ic_menu_add", "drawable", Platform.CurrentActivity.PackageName);
-        //    var icon = Platform.CurrentActivity.GetDrawable(Android.Resource.Drawable.IcDelete);
-        //    item.SetIcon(icon);
-        //}
-        //else
         if (action.Icon != null)
         {
             var id = Platform.CurrentActivity.GetDrawableId(((IFileImageSource)action.Icon).File);
@@ -339,7 +332,7 @@ public class MenuActionListener : Java.Lang.Object, IOnLongClickListener, IOnCli
         v.Animate().Cancel();
         v.ScaleX = 1f;
         v.ScaleY = 1f;
-        ShowMenu(v);
+        ShowMenuWithPreview(v);
         return true;
     }
 
@@ -362,16 +355,8 @@ public class MenuActionListener : Java.Lang.Object, IOnLongClickListener, IOnCli
         return false;
     }
 
-    public void ShowMenu(AView aview)
+    void PopulateMenu(IMenu amenu)
     {
-        ContextMenuWindow w = null;
-        if (_propertyOwner is VisualElement visualElement)
-        {
-            var preview = ContextMenu.GetPreview(visualElement);
-
-            w = new ContextMenuWindow(Platform.CurrentActivity, aview, preview);
-        }
-
         var menuTemplate = ContextMenu.GetMenu(_propertyOwner);
 
         var content = menuTemplate.CreateContent();
@@ -385,17 +370,37 @@ public class MenuActionListener : Java.Lang.Object, IOnLongClickListener, IOnCli
 
             foreach (var item in menu.Children)
             {
-                var ids = ContextMenu.AddRootMenuItem(item, w.Menu, rootGroupId, rootId);
+                var ids = ContextMenu.AddRootMenuItem(item, amenu, rootGroupId, rootId);
                 rootGroupId = ids.Item1;
                 rootId = ids.Item2;
             }
 #if ANDROID28_0_OR_GREATER
-            w.Menu.SetGroupDividerEnabled(true);
+            amenu.SetGroupDividerEnabled(true);
 #endif
+        }
+    }
 
+    public void ShowMenu(AView aview)
+    {
+        var menu = new ContextMenuPopup(aview, true);
 
-            w.Show();
+        PopulateMenu(menu.Menu);
+
+        menu.Show(0, 0);
+    }
+
+    public void ShowMenuWithPreview(AView aview)
+    {
+        ContextMenuWindow w = null;
+        if (_propertyOwner is VisualElement visualElement)
+        {
+            var preview = ContextMenu.GetPreview(visualElement);
+
+            w = new ContextMenuWindow(Platform.CurrentActivity, aview, preview);
         }
 
+        PopulateMenu(w.Menu);
+
+        w.Show();
     }
 }
