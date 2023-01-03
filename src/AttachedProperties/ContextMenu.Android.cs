@@ -392,15 +392,25 @@ public class MenuActionListener : Java.Lang.Object, IOnLongClickListener, IOnCli
     public void ShowMenuWithPreview(AView aview)
     {
         ContextMenuWindow w = null;
+        int offsetX = 0;
+        int offsetY = 0;
         if (_propertyOwner is VisualElement visualElement)
         {
             var preview = ContextMenu.GetPreview(visualElement);
 
             w = new ContextMenuWindow(Platform.CurrentActivity, aview, preview);
+
+            if (preview != null)
+            {
+                // The padding of the preview will change the visual position of the content
+                // adjust the menu's offset to align with what's shown
+                offsetX = (int)preview.Padding.Left;
+                offsetY = -(int)preview.Padding.Bottom;
+            }
         }
 
         PopulateMenu(w.Menu);
 
-        w.Show();
+        w.Show(ViewUtils.DpToPx(offsetX), ViewUtils.DpToPx(offsetY));
     }
 }

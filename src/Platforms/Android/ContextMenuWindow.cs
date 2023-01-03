@@ -9,6 +9,7 @@ using Android.Views;
 using Android.Widget;
 using AndroidX.Core.View;
 using Kotlin.Jvm.Functions;
+using Microsoft.Maui.Controls.PlatformConfiguration;
 using Microsoft.Maui.Graphics.Platform;
 using Microsoft.Maui.Platform;
 using AView = Android.Views.View;
@@ -143,6 +144,8 @@ internal class ContextMenuWindow
     AView _content;
     ContextMenuBackgroundView _backgroundView;
     ContextMenuPopup _menu;
+    private int _offsetX;
+    private int _offsetY;
 
     public ContextMenuWindow(Context context, AView parent, Preview? p)
     {
@@ -228,8 +231,10 @@ internal class ContextMenuWindow
         return b;
     }
 
-    public void Show()
+    public void Show(int offsetX = 0, int offsetY = 0)
     {
+        _offsetX = offsetX;
+        _offsetY = offsetY;
         var token = _parent.RootView.WindowToken;
         _backgroundView = CreateBackgroundView();
         _decorView = CreateDecorView(_backgroundView, _content);
@@ -237,7 +242,7 @@ internal class ContextMenuWindow
         _windowManager.AddView(_decorView, new WindowManagerLayoutParams(
             WindowManagerLayoutParams.MatchParent, WindowManagerLayoutParams.MatchParent,
             WindowManagerTypes.ApplicationPanel,
-            WindowManagerFlags.LayoutInScreen,
+            WindowManagerFlags.LayoutNoLimits,
             Format.Translucent));
 
         _parent.ScaleX = ContextMenu.LongPressScaleFactor;
@@ -291,7 +296,7 @@ internal class ContextMenuWindow
             .SetDuration(ShowAnimationDuration)
             .WithEndAction(() =>
             {
-                _menu.Show(0, ViewUtils.DpToPx(ContextMenuWindow.ContextMenuSpacing));
+                _menu.Show(_offsetX, _offsetY + ViewUtils.DpToPx(ContextMenuWindow.ContextMenuSpacing));
             })
             .Start();
 

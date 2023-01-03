@@ -299,6 +299,11 @@ internal class ContextMenuPopup : PopupWindow
         }
     }
 
+    bool IsDarkMode()
+    {
+        return ((int)_anchor.Context.Resources.Configuration.UiMode & (int)Android.Content.Res.UiMode.NightMask) == (int)Android.Content.Res.UiMode.NightYes;
+    }
+
     void Setup(AView anchor, MenuBuilder menu)
     {
         _menu = menu;
@@ -322,7 +327,10 @@ internal class ContextMenuPopup : PopupWindow
             ViewUtils.DpToPx((int)cornerRadius.BottomLeft),
             ViewUtils.DpToPx((int)cornerRadius.BottomLeft)
         }, null, null));
-        s.Paint.Color = backgroundColor != null ? backgroundColor.ToPlatform() : new Android.Graphics.Color(_anchor.Context.GetColor(Android.Resource.Color.BackgroundLight));
+
+        
+
+        s.Paint.Color = backgroundColor != null ? backgroundColor.ToPlatform() : new Android.Graphics.Color(_anchor.Context.GetColor(IsDarkMode() ? Android.Resource.Color.BackgroundDark : Android.Resource.Color.BackgroundLight));
         SetBackgroundDrawable(s);
         ContentView.Background = s;
         ContentView.ClipToOutline = true;
